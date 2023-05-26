@@ -11,6 +11,7 @@ include {SEQKIT} from './modules/assemble.nf'
 include {PROKKA} from './modules/assemble.nf'
 include {BAKTA_DOWNLOAD} from './modules/assemble.nf'
 include {BAKTA} from './modules/assemble.nf'
+include {ROARY} from './modules/assemble.nf'
 
 
 workflow {
@@ -30,7 +31,7 @@ workflow {
 
     SEQKIT(ASSEMBLE.out.fasta)
 
-    POLISH(ASSEMBLE.out.fasta.combine(SUBSAMPLE.out.fq, by:0))
+    //POLISH(ASSEMBLE.out.fasta.combine(SUBSAMPLE.out.fq, by:0))
 
     //PROKKA(ASSEMBLE.out.fasta)
 
@@ -38,5 +39,10 @@ workflow {
 
     BAKTA(ASSEMBLE.out.fasta.combine(BAKTA_DOWNLOAD.out))
 
+    gff3s=BAKTA.out.gff3
+        .map{ row -> row[1]}
+        .collect()
+
+    ROARY(gff3s)
 
 }

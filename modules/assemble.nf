@@ -111,7 +111,7 @@ process PROKKA {
 }
 
 process BAKTA_DOWNLOAD {
-    tag 'online'
+    label 'online'
 
     output:
     path('db')
@@ -138,7 +138,7 @@ process BAKTA {
 
     script:
     """
-    bakta --db db \
+    bakta --db db/db-light \
         -t ${task.cpus} \
         --prefix ${sample} \
         consensus.fa
@@ -168,5 +168,25 @@ process SEQKIT {
     stub:
     """
     touch ${sample}.tsv
+    """
+}
+
+process ROARY {
+
+    publishDir "roary/${task.process.replaceAll(":","_")}", mode: 'copy'
+
+    input:
+    path('*')
+
+    output:
+    path("roary_output")
+
+    script:
+    """
+    roary –f roary_output *.gff3
+    """
+    stub:
+    """
+    mkdir roary_output
     """
 }

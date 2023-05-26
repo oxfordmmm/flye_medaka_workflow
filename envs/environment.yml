@@ -1,0 +1,13 @@
+name: assembly 
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - flye>=2.9
+  - rasusa
+  - seqkit   
+  - medaka
+  - prokka
+  - bakta
+  - roary

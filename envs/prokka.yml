@@ -1,0 +1,7 @@
+name: assembly 
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - prokka
