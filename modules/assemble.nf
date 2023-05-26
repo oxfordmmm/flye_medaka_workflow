@@ -50,6 +50,7 @@ process ASSEMBLE {
 }
 
 process POLISH {
+    label 'medaka'
     tag {sample}
     cpus 2
 
@@ -59,7 +60,7 @@ process POLISH {
 
     input:
     tuple val(sample), path('contigs.fasta'), path('reads.fastq.gz')
-    each path('model.tar.gz')
+    //each path('model.tar.gz')
 
     output:
     tuple val(sample), path('output/consensus.fasta'), emit: fasta
@@ -71,7 +72,7 @@ process POLISH {
 	-d contigs.fasta \
 	-o output \
 	-t ${task.cpus} \
-	-m model.tar.gz
+	-m r941_min_hac_g507
     """
     stub:
     """
@@ -101,6 +102,46 @@ process PROKKA {
         --compliant \
         --outdir ${sample}_prokka \
         --prefix ${sample} consensus.fa
+    """
+    stub:
+    """
+    mkdir ${sample}_prokka
+    touch ${sample}_prokka/${sample}.gbk 
+    """
+}
+
+process BAKTA_DOWNLOAD {
+    tag 'online'
+
+    output:
+    path('db')
+
+    script:
+    """
+    bakta_db download --output db --type light
+    """
+
+}
+
+process BAKTA {
+    tag { sample }
+    
+    publishDir "bakta/", mode: 'copy'
+
+    cpus=8
+
+    input:
+        tuple val(sample), path("consensus.fa"), path('db')
+
+    output:
+        tuple val(sample), path("${sample}.gff3"), emit: gff3
+
+    script:
+    """
+    bakta --db db \
+        -t ${task.cpus} \
+        --prefix ${sample} \
+        consensus.fa
     """
     stub:
     """

@@ -9,4 +9,5 @@ dependencies:
   - seqkit   
   - medaka
   - prokka
+  - bakta
   - roary
