@@ -1,6 +1,8 @@
 process SUBSAMPLE {
     tag {sample}
 
+    label 'short'
+
     input:
     tuple val(sample), path('reads.fastq.gz')
 
@@ -20,6 +22,8 @@ process SUBSAMPLE {
 process ASSEMBLE {
     tag {sample}
     cpus 4
+
+    label 'short'
 
     publishDir "assemblies/${task.process.replaceAll(":","_")}", mode: 'copy', saveAs: { filename -> "${sample}.fasta"} 
 
@@ -46,14 +50,16 @@ process ASSEMBLE {
 }
 
 process POLISH {
-    label 'medaka'
     tag {sample}
     cpus 2
+
+    label 'short'
 
     publishDir "assemblies/${task.process.replaceAll(":","_")}", mode: 'copy', saveAs: { filename -> "${sample}.fasta"}
 
     input:
-    tuple val(sample), path('contigs.fasta'), path('reads.fastq.gz'), val(model)
+    tuple val(sample), path('contigs.fasta'), path('reads.fastq.gz')
+    each path('model.tar.gz')
 
     output:
     tuple val(sample), path('output/consensus.fasta'), emit: fasta
@@ -65,11 +71,61 @@ process POLISH {
 	-d contigs.fasta \
 	-o output \
 	-t ${task.cpus} \
-	-m ${model}
+	-m model.tar.gz
     """
     stub:
     """
     mkdir output
     touch output/consensus.fasta
+    """
+}
+
+process PROKKA {
+    tag { sample }
+    
+    publishDir "prokka/", mode: 'copy'
+
+    cpus=8
+
+    input:
+        tuple val(sample), path("consensus.fa")
+
+    output:
+        tuple val(sample), path("${sample}_prokka"), emit: ch_out
+
+    script:
+    """
+    prokka --cpus ${task.cpus} \
+        --addgenes \
+        --force \
+        --compliant \
+        --outdir ${sample}_prokka \
+        --prefix ${sample} consensus.fa
+    """
+    stub:
+    """
+    mkdir ${sample}_prokka
+    touch ${sample}_prokka/${sample}.gbk 
+    """
+}
+
+process SEQKIT {
+    tag {sample}
+
+    publishDir "CSVs/${task.process.replaceAll(":","_")}", mode: 'copy'
+
+    input:
+    tuple val(sample),  path('contigs.fasta')
+
+    output:
+    tuple val(sample),  path("${sample}.tsv")
+
+    script:
+    """
+    seqkit stats -T --all contigs.fasta > ${sample}.tsv
+    """
+    stub:
+    """
+    touch ${sample}.tsv
     """
 }

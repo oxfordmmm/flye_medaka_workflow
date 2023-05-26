@@ -7,5 +7,6 @@ dependencies:
   - flye>=2.9
   - rasusa
   - seqkit   
-  - pip:
-    - medaka
+  - medaka
+  - prokka
+  - roary

@@ -7,6 +7,8 @@ nextflow.enable.dsl=2
 include {SUBSAMPLE} from './modules/assemble.nf'
 include {ASSEMBLE} from './modules/assemble.nf'
 include {POLISH} from './modules/assemble.nf'
+include {SEQKIT} from './modules/assemble.nf'
+include {PROKKA} from './modules/assemble.nf'
 
 
 workflow {
@@ -15,12 +17,19 @@ workflow {
            .map{ file -> tuple(file.simpleName, file) }
            .set{ ch_fqs }
 
+    Channel.fromPath("${params.inputmodel}")
+        .set{ ch_model }
+
 
     main:
     SUBSAMPLE(ch_fqs)
 
     ASSEMBLE(SUBSAMPLE.out.fq)
 
-    POLISH(ASSEMBLE.out.fasta.combine(SUBSAMPLE.out.fq, by:0))
+    SEQKIT(ASSEMBLE.out.fasta)
+
+    //POLISH(ASSEMBLE.out.fasta.combine(SUBSAMPLE.out.fq, by:0), ch_model)
+
+    PROKKA(ASSEMBLE.out.fasta)
 
 }
