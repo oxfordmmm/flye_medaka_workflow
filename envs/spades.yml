@@ -1,0 +1,8 @@
+name: spades 
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - spades
+

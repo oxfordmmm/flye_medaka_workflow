@@ -60,7 +60,7 @@ process POLISH {
 
     input:
     tuple val(sample), path('contigs.fasta'), path('reads.fastq.gz')
-    //each path('model.tar.gz')
+    each path('model.tar.gz')
 
     output:
     tuple val(sample), path('output/consensus.fasta'), emit: fasta
@@ -72,7 +72,7 @@ process POLISH {
 	-d contigs.fasta \
 	-o output \
 	-t ${task.cpus} \
-	-m r941_min_hac_g507
+	-m model.tar.gz
     """
     stub:
     """
@@ -86,7 +86,7 @@ process PROKKA {
     
     publishDir "prokka/", mode: 'copy'
 
-    cpus=8
+    cpus 8
 
     input:
         tuple val(sample), path("consensus.fa")
@@ -128,7 +128,7 @@ process BAKTA {
     
     publishDir "bakta/", mode: 'copy'
 
-    cpus=8
+    cpus 8
 
     input:
         tuple val(sample), path("consensus.fa"), path('db')
@@ -175,6 +175,8 @@ process ROARY {
 
     publishDir "roary/${task.process.replaceAll(":","_")}", mode: 'copy'
 
+    cpus 8
+
     input:
     path('*')
 
@@ -183,10 +185,39 @@ process ROARY {
 
     script:
     """
-    roary –f roary_output *.gff3
+    roary -p ${task.cpus} -f roary_output *.gff3
     """
     stub:
     """
     mkdir roary_output
+    """
+}
+
+process SPADES {
+    tag {sample}
+    cpus 4
+
+    label 'short'
+
+    publishDir "assemblies/${task.process.replaceAll(":","_")}", mode: 'copy', saveAs: { filename -> "${sample}.fasta"} 
+
+    input:
+    //tuple val(sample), val(refname), val(reads)
+    tuple val(sample),  file('reads1.fastq.gz'), file('reads2.fastq.gz')
+
+    output:
+    tuple val(sample), file("${sample}/contigs.fasta"), emit: fasta
+
+    script:
+    """
+    spades.py -t ${task.cpus} \
+            --pe1-1 reads1.fastq.gz \
+            --pe1-2 reads2.fastq.gz \
+            -o ${sample}
+    """
+    stub:
+    """
+    mkdir ${sample}
+    touch ${sample}/contigs.fasta
     """
 }
