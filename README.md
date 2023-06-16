@@ -15,7 +15,11 @@ nextflow run  https://github.com/oxfordmmm/flye_medaka_workflow \
 ## Outputs
 
 CSVs - seqkit contig summaries
+
 MLST - output from MLST
+
 assemblies - contigs from flye or spades
+
 bakta - output from bakta annotation
+
 roary - output from ROARY
