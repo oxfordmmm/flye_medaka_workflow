@@ -11,7 +11,7 @@ process SUBSAMPLE {
 
     script:
     """
-    rasusa --input reads.fastq.gz --coverage 100 --genome-size 2.4m | gzip > ${sample}.fastq.gz
+    rasusa --input reads.fastq.gz --coverage 500 --genome-size 2.4m | gzip > ${sample}.fastq.gz
     """ 
     stub:
     """
@@ -125,6 +125,7 @@ process BAKTA_DOWNLOAD {
 
 process BAKTA {
     tag { sample }
+    errorStrategy 'ignore'
     
     publishDir "bakta/", mode: 'copy'
 
@@ -134,13 +135,14 @@ process BAKTA {
         tuple val(sample), path("consensus.fa"), path('db')
 
     output:
-        tuple val(sample), path("${sample}.gff3"), emit: gff3
+        tuple val(sample), path("output/${sample}.gff3"), emit: gff3
 
     script:
     """
     bakta --db db/db-light \
         -t ${task.cpus} \
         --prefix ${sample} \
+        -o output \
         consensus.fa
     """
     stub:
@@ -196,6 +198,7 @@ process ROARY {
 process SPADES {
     tag {sample}
     cpus 4
+    errorStrategy 'ignore'
 
     label 'short'
 
@@ -213,11 +216,36 @@ process SPADES {
     spades.py -t ${task.cpus} \
             --pe1-1 reads1.fastq.gz \
             --pe1-2 reads2.fastq.gz \
+            --isolate \
             -o ${sample}
     """
     stub:
     """
     mkdir ${sample}
     touch ${sample}/contigs.fasta
+    """
+}
+
+process MLST {
+    tag {sample}
+    cpus 4
+
+    label 'short'
+
+    publishDir "MLST/${task.process.replaceAll(":","_")}", mode: 'copy'
+
+    input:
+    tuple val(sample), path("${sample}.fasta")
+
+    output:
+    path("${sample}.tsv"), optional: true
+
+    script:
+    """
+    mlst ${sample}.fasta > ${sample}.tsv
+    """
+    stub:
+    """
+    touch ${sample}.tsv
     """
 }

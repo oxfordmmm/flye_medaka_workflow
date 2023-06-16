@@ -13,6 +13,7 @@ include {BAKTA_DOWNLOAD} from './modules/assemble.nf'
 include {BAKTA} from './modules/assemble.nf'
 include {ROARY} from './modules/assemble.nf'
 include {SPADES} from './modules/assemble.nf'
+include {MLST} from './modules/assemble.nf'
 
 
 
@@ -55,4 +56,5 @@ workflow {
 
     ROARY(gff3s)
 
+    MLST(contigs)
 }
