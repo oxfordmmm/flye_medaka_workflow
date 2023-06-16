@@ -135,14 +135,16 @@ process BAKTA {
         tuple val(sample), path("consensus.fa"), path('db')
 
     output:
-        tuple val(sample), path("output/${sample}.gff3"), emit: gff3
+        tuple val(sample), path("${sample}_bakta/${sample}.gff3"), emit: gff3
+        tuple val(sample), path("${sample}_bakta"), emit: fol
+
 
     script:
     """
     bakta --db db/db-light \
         -t ${task.cpus} \
         --prefix ${sample} \
-        -o output \
+        -o ${sample}_bakta/ \
         consensus.fa
     """
     stub:
