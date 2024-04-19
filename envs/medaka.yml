@@ -5,3 +5,4 @@ channels:
   - defaults
 dependencies:
   - medaka
+  - ont-fast5-api
