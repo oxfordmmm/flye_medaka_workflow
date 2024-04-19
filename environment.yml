@@ -11,3 +11,4 @@ dependencies:
   - prokka
   - bakta
   - roary
+  - python
