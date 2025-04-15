@@ -11,7 +11,7 @@ process SUBSAMPLE {
 
     script:
     """
-    rasusa --input reads.fastq.gz --coverage 500 --genome-size 2.4m | gzip > ${sample}.fastq.gz
+    rasusa reads reads.fastq.gz --coverage 500 --genome-size 2.3m | gzip > ${sample}.fastq.gz
     """ 
     stub:
     """
@@ -51,8 +51,10 @@ process ASSEMBLE {
 
 process POLISH {
     label 'medaka'
+    label 'gpu'
     tag {sample}
     cpus 2
+
 
     label 'short'
 
@@ -60,7 +62,7 @@ process POLISH {
 
     input:
     tuple val(sample), path('contigs.fasta'), path('reads.fastq.gz')
-    each path('model.tar.gz')
+    //each path('model.tar.gz')
 
     output:
     tuple val(sample), path('output/consensus.fasta'), emit: fasta
@@ -71,13 +73,38 @@ process POLISH {
 	-i reads.fastq.gz \
 	-d contigs.fasta \
 	-o output \
-	-t ${task.cpus} \
-	-m model.tar.gz
+	-t ${task.cpus} 
     """
     stub:
     """
     mkdir output
     touch output/consensus.fasta
+    """
+}
+
+process DNAAPLER {
+    tag {sample}
+    cpus 2
+
+    publishDir "assemblies/${task.process.replaceAll(":","_")}", mode: 'copy', saveAs: { filename -> "${sample}.fasta"} 
+
+    input:
+    tuple val(sample),  path('input_assembly.fasta')
+    
+    output:
+    tuple val(sample), path("dnaapler_out/${sample}*.fasta"), emit: fasta
+
+    script:
+    """
+    dnaapler all \
+        -i input_assembly.fasta -o dnaapler_out -p ${sample} -t ${task.cpus}
+
+
+    """
+    stub:
+    """
+    mkdir assembly
+    touch assembly/assembly.fasta
     """
 }
 
@@ -129,7 +156,7 @@ process BAKTA {
     
     publishDir "bakta/", mode: 'copy'
 
-    cpus 8
+    cpus 1
 
     input:
         tuple val(sample), path("consensus.fa"), path('db')
@@ -230,7 +257,6 @@ process SPADES {
 
 process MLST {
     tag {sample}
-    cpus 4
 
     label 'short'
 
@@ -243,11 +269,127 @@ process MLST {
     path("${sample}.tsv"), optional: true
 
     script:
-    """
-    mlst ${sample}.fasta > ${sample}.tsv
-    """
+    if (params.mlst_scheme != '') {
+        """
+        mlst --scheme $params.mlst_scheme --legacy ${sample}.fasta > ${sample}.tsv
+        """
+    } else {
+        """
+        mlst ${sample}.fasta > ${sample}.tsv
+        """
+    }
     stub:
     """
     touch ${sample}.tsv
+    """
+}
+
+process COMBINE_MLST {
+    label 'pandas'
+
+    publishDir "MLST/${task.process.replaceAll(":","_")}", mode: 'copy'
+
+    input:
+    path('MLST???.tsv')
+    each path('meta.csv')
+
+    output:
+    path("MLST_REPORT.csv")
+
+    script:
+    """
+    combine_mlst.py -i MLST*.tsv -m meta.csv -o MLST_REPORT.csv -s $params.mlst_scheme
+    """
+    stub:
+    """
+    touch meta.csv
+    """
+}
+
+process DNADIFF {
+    tag {sample1 + ' ' + sample2}
+
+    publishDir "DNAdiff/${task.process.replaceAll(":","_")}/${sample1}/${sample2}/", mode: 'copy'
+
+    input:
+    tuple val(sample1), path("${sample1}.fasta"), val(sample2), path("${sample2}.fasta")
+
+    output:
+    tuple val(sample1), val(sample2), path("out.report"), optional: true
+
+    script:
+    """
+    dnadiff ${sample1}.fasta ${sample2}.fasta 
+    """
+    stub:
+    """
+    touch ${sample1}_${sample2}.report
+    """
+}
+
+process PARSE_DD_REPORT {
+    tag {sample1 + ' ' + sample2}
+    label 'pandas'
+
+    publishDir "DD_REPORTS/${task.process.replaceAll(":","_")}", mode: 'copy'
+
+    input:
+    tuple val(sample1), val(sample2), path("out.report")
+
+    output:
+    path("${sample1}_${sample2}.csv")
+
+    script:
+    """
+    parse_dnadiff_report.py --sample_name1 ${sample1} \
+        --sample_name2 ${sample2} \
+        -i out.report \
+        -o ${sample1}_${sample2}.csv 
+    """
+    stub:
+    """
+    touch ${sample1}_${sample2}.csv
+    """
+}
+
+process SNP_MATRIX {
+    label 'pandas'
+
+    publishDir "SNP_MATRIX/${task.process.replaceAll(":","_")}", mode: 'copy'
+
+    input:
+    path("SNPs??????.csv")
+
+    output:
+    path("SNP_matrix.csv")
+
+    script:
+    """
+    matrix.py -i SNPs*.csv -o SNP_matrix.csv
+    """
+    stub:
+    """
+    touch SNP_matrix.csv
+    """
+}
+
+process FILTER_CONTIGS {
+    tag {sample1}
+
+    publishDir "Filtered_contigs/${task.process.replaceAll(":","_")}/", mode: 'copy'
+
+    input:
+    tuple val(sample1), path("${sample1}.fasta")
+
+    output:
+    tuple val(sample1), path("*${sample1}_filt.fasta"), optional: true
+
+    script:
+    """
+    filter_contigs.py ${sample1}.fasta ${sample1}_filt.fasta 1500000 ${sample1}
+    """
+    stub:
+    """
+    touch ${sample1}_filt.fasta
     """
 }
