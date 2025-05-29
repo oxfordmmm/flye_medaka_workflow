@@ -1,0 +1,8 @@
+name: dnadiff 
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - mummer
+  - biopython

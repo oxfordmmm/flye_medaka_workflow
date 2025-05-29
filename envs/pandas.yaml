@@ -1,0 +1,9 @@
+name: pandas 
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - pandas
+  - six
+
+
